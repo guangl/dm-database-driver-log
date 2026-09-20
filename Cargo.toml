@@ -5,6 +5,11 @@ edition = "2024"
 authors = ["guangl"]
 description = "A pluggable streaming parser for DM database driver logs"
 license = "MIT"
+repository = "https://github.com/guangl/dm-database-driver-log"
+documentation = "https://docs.rs/dm-database-driver-log"
+homepage = "https://github.com/guangl/dm-database-driver-log"
+keywords = ["dm-database", "driver-log", "parser", "jdbc"]
+categories = ["parsing", "database"]
 include = [
     "Cargo.toml",
     "README.md",

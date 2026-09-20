@@ -1,0 +1,93 @@
+name: Update Benchmark Baseline
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: benchmark-baseline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  update-baseline:
+    name: Update Baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run Clippy
+        run: cargo clippy --locked --all-features --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test --locked --all-features
+
+      - name: Run benchmarks
+        run: cargo bench --locked --all-features --bench driver_benchmark
+
+      - name: Update baseline.json from estimates
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import glob
+          import json
+          from pathlib import Path
+
+          baselines = {}
+          for raw_path in glob.glob("target/criterion/**/new/estimates.json", recursive=True):
+              path = Path(raw_path)
+              relative = path.relative_to("target/criterion")
+              if len(relative.parts) != 4:
+                  continue
+              group, benchmark, _, _ = relative.parts
+              with path.open() as stream:
+                  estimates = json.load(stream)
+              baselines[f"{group}/{benchmark}"] = estimates["mean"]["point_estimate"]
+
+          if not baselines:
+              raise SystemExit("No Criterion estimates were generated")
+
+          with open("benchmarks/baseline.json", "w") as stream:
+              json.dump(baselines, stream, indent=4, sort_keys=True)
+              stream.write("\n")
+
+          print("Updated benchmarks/baseline.json:")
+          for key, value in sorted(baselines.items()):
+              print(f"  {key}: {value:.0f} ns")
+          PYEOF
+
+      - name: Commit updated baseline
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add benchmarks/baseline.json
+          if git diff --staged --quiet; then
+            echo "Benchmark baseline did not change"
+          else
+            git commit -m "chore(bench): update baseline [skip ci]"
+            git push origin HEAD:main
+          fi

@@ -172,3 +172,18 @@ cargo bench --all-features --bench driver_benchmark
 ```
 
 其中 JDBC 和 `dm-provider` 的多行样本分别验证对应 framing 的文件流式解析。
+
+## GitHub Actions
+
+- `CI`：检查格式、全部 feature 组合测试、Clippy、文档、examples/benchmark
+  编译、crate 打包和 90% 覆盖率门禁。
+- `Release to crates.io`：推送 `v*` tag 时校验版本、测试、构建并使用
+  `CRATES_IO_TOKEN` 发布。
+- `Update Benchmark Baseline`：在 Actions 页面手动触发，运行 Criterion 并更新
+  `benchmarks/baseline.json`。
+
+本地可以用下面的脚本检查 Criterion 结果是否超过 5% 回归阈值：
+
+```bash
+bash scripts/check-regression.sh
+```
