@@ -4,7 +4,7 @@
 //! `ns` 或 `ms`，并且 SQL 常常跨越多行。本模块通过 `dm-provider` feature
 //! 启用，避免把两套格式的状态机混在同一个迭代器里。
 
-use crate::core::{LogFormat, LogRecord, RecordFraming};
+use crate::core::{LogFormat, RecordFraming};
 use crate::error::ParseError;
 
 const MARK_RETURN: &str = "[RETURN]:";
@@ -48,24 +48,6 @@ pub struct DmProviderEvent {
 /// DM Provider 日志格式适配器。
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DmProviderFormat;
-
-impl LogRecord for DmProviderEvent {
-    fn method(&self) -> &str {
-        &self.method
-    }
-
-    fn category(&self) -> &str {
-        self.category
-    }
-
-    fn used_time_ms(&self) -> Option<f64> {
-        self.used_time_ms
-    }
-
-    fn exec_id(&self) -> Option<i64> {
-        self.exec_id
-    }
-}
 
 impl LogFormat for DmProviderFormat {
     type Event = DmProviderEvent;

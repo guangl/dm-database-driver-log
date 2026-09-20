@@ -1,7 +1,7 @@
 //! 所有驱动日志格式共用的文件流式解析引擎。
 //!
-//! 具体格式只需要实现 [`LogFormat`]，文件生命周期、编码、记录 framing、错误上下文
-//! 和通用过滤器都由这里统一处理。
+//! 内置格式只需要实现 [`LogFormat`]，文件生命周期、编码、记录 framing 和错误上下文
+//! 都由这里统一处理。
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -20,20 +20,11 @@ pub enum RecordFraming {
     HeaderDelimited,
 }
 
-/// 通用事件字段访问接口，供格式无关的过滤器使用。
-pub trait LogRecord {
-    fn method(&self) -> &str;
-    fn category(&self) -> &str;
-    fn used_time_ms(&self) -> Option<f64>;
-    fn exec_id(&self) -> Option<i64>;
-}
-
-/// 一个可插拔的驱动日志格式适配器。
+/// 一个内置驱动日志格式适配器。
 ///
-/// 新增格式时只需要实现这个 trait，并为事件实现 [`LogRecord`]；文件迭代和
-/// 通用过滤器无需重新实现。
+/// 内置格式实现这个 trait；文件迭代无需在具体格式中重复实现。
 pub trait LogFormat: 'static {
-    type Event: LogRecord;
+    type Event;
 
     const FRAMING: RecordFraming;
 
@@ -68,10 +59,6 @@ impl<F: LogFormat> LogParser<F> {
             done: false,
             _format: PhantomData,
         })
-    }
-
-    pub fn path(&self) -> &Path {
-        &self.path
     }
 }
 
@@ -123,55 +110,6 @@ pub struct LogIterator<F: LogFormat> {
 }
 
 impl<F: LogFormat> LogIterator<F> {
-    /// 丢弃格式错误的记录，只返回成功解析的事件。
-    pub fn skip_errors(self) -> impl Iterator<Item = F::Event> {
-        self.filter_map(Result::ok)
-    }
-
-    /// 只保留指定方法的事件。
-    pub fn filter_by_method(
-        self,
-        method: &str,
-    ) -> impl Iterator<Item = Result<F::Event, ParseError>> + '_ {
-        self.filter(move |result| match result {
-            Ok(event) => event.method() == method,
-            Err(_) => true,
-        })
-    }
-
-    /// 只保留指定分类的事件。
-    pub fn filter_by_category(
-        self,
-        category: &str,
-    ) -> impl Iterator<Item = Result<F::Event, ParseError>> + '_ {
-        self.filter(move |result| match result {
-            Ok(event) => event.category() == category,
-            Err(_) => true,
-        })
-    }
-
-    /// 只保留驱动耗时大于等于 `min_ms` 的事件。
-    pub fn filter_by_used_time(
-        self,
-        min_ms: f64,
-    ) -> impl Iterator<Item = Result<F::Event, ParseError>> {
-        self.filter(move |result| match result {
-            Ok(event) => event.used_time_ms().is_some_and(|value| value >= min_ms),
-            Err(_) => true,
-        })
-    }
-
-    /// 只保留属于指定执行编号的事件。
-    pub fn filter_by_exec_id(
-        self,
-        exec_id: i64,
-    ) -> impl Iterator<Item = Result<F::Event, ParseError>> {
-        self.filter(move |result| match result {
-            Ok(event) => event.exec_id() == Some(exec_id),
-            Err(_) => true,
-        })
-    }
-
     fn read_line(&mut self) -> Result<Option<(u64, String)>, ParseError> {
         self.line_buf.clear();
         let bytes_read = self

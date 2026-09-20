@@ -17,7 +17,7 @@
 
 ```toml
 [dependencies]
-dm-database-driver-log = { version = "0.1", features = ["dm-provider"] }
+dm-database-driver-log = { version = "0.2", features = ["dm-provider"] }
 ```
 
 ## 支持的日志格式
@@ -77,41 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 `parse_bytes_with_encoding()` 返回 `LogEvent`。需要访问格式专属字段时使用
 `event.as_jdbc()` 或 `event.as_dm_provider()`。
 
-## 扩展其他驱动日志
+## 其他驱动日志
 
-文件读取、编码处理、单行/跨行 framing、错误上下文和通用过滤器位于统一引擎中。新增驱动时实现 `LogFormat` 和 `LogRecord` 即可复用：
-
-```rust,ignore
-use dm_database_driver_log::advanced::{LogFormat, LogParserBuilder, LogRecord, RecordFraming};
-
-struct OtherDriverFormat;
-struct OtherDriverEvent {
-    method: String,
-    used_time_ms: Option<f64>,
-    exec_id: Option<i64>,
-}
-
-impl LogRecord for OtherDriverEvent {
-    fn method(&self) -> &str { &self.method }
-    fn category(&self) -> &str { "other-driver" }
-    fn used_time_ms(&self) -> Option<f64> { self.used_time_ms }
-    fn exec_id(&self) -> Option<i64> { self.exec_id }
-}
-
-// 为 OtherDriverFormat 实现 LogFormat 后即可使用：
-// advanced::LogParserBuilder::<OtherDriverFormat>::new(path).build()?.iter()?;
-```
-
-`RecordFraming::Line` 适合一行一条记录；`RecordFraming::HeaderDelimited` 适合 SQL 或调用栈跨行的日志。
-高级通用引擎位于 `advanced` 命名空间，内置 JDBC/DM Provider 的日常调用不需要接触它。
-
-新增一种驱动日志时按以下顺序处理：
-
-1. 在 `src/formats/<driver>.rs` 定义事件和格式解析器。
-2. 为事件实现 `LogRecord`，为格式实现 `LogFormat`，选择合适的 `RecordFraming`。
-3. 在 `src/formats/mod.rs` 增加 feature 条件模块。
-4. 在 `Cargo.toml` 增加该驱动 feature，并在 `lib.rs` 暴露格式事件和兼容 Builder 名称。
-5. 在 `tests/integration_test.rs` 增加从文件、跨行边界、错误、过滤和汇总结果的完整链路测试。
+本 crate 的公开 API 只覆盖 JDBC 和 DM Provider。需要支持其他驱动时，请 fork 本仓库，
+在 `src/formats/` 中增加格式模块，并同步修改 feature、统一事件枚举、格式识别和完整链路测试。
 
 ## 使用方式
 
@@ -119,7 +88,7 @@ impl LogRecord for OtherDriverEvent {
 
 ```toml
 [dependencies]
-dm-database-driver-log = "0.1"
+dm-database-driver-log = "0.2"
 ```
 
 逐行流式解析文件：
@@ -185,15 +154,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 启用 `jdbc` feature 后可使用 `JdbcEvent`，启用 `dm-provider` feature 后可使用
 `DmProviderEvent` 访问对应格式的专属结构。默认 feature 是 `jdbc`。
-
-### 扩展其他驱动
-
-`advanced` 命名空间提供新增驱动所需的通用引擎：
-
-- `advanced::LogFormat`：定义日志格式、解析和 framing 行为。
-- `advanced::LogRecord`：定义公共过滤字段。
-- `advanced::LogParserBuilder<F>` / `advanced::LogParser<F>`：构建和运行指定格式的解析器。
-- `advanced::RecordFraming`：选择单行或跨行记录边界。
 
 ## 测试覆盖率
 

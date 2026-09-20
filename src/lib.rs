@@ -7,7 +7,7 @@
 //! ```
 //!
 //! 内置 JDBC 与 DM Provider 格式通过统一的 [`LogParserBuilder`] 自动识别。
-//! 其他驱动可以使用 [`advanced`] 命名空间中的通用格式引擎扩展。
+//! 其他驱动格式请 fork 源码后在内部格式模块中实现。
 
 mod core;
 mod encoding;
@@ -23,13 +23,6 @@ pub use unified::{
     LogEvent, LogFormatKind, LogIterator, LogParser, LogParserBuilder, parse_bytes,
     parse_bytes_with_encoding, parse_line,
 };
-
-/// 面向新增驱动格式的高级通用引擎 API。
-pub mod advanced {
-    pub use crate::core::{
-        LogFormat, LogIterator, LogParser, LogParserBuilder, LogRecord, RecordFraming,
-    };
-}
 
 #[cfg(feature = "dm-provider")]
 pub use formats::dm_provider::DmProviderEvent;

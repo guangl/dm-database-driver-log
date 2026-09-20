@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - Unreleased
+
+### Changed (Breaking)
+
+- 移除公开的 `advanced` 通用引擎 API。
+- 其他驱动格式需要 fork 源码后在内部格式模块中实现，不再承诺通过 crate 公共 API 扩展。
+
 ## [0.1.1] - 2026-09-20
 
 ### Fixed

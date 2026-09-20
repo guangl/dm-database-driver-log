@@ -5,7 +5,6 @@ use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use crate::core::LogRecord;
 use crate::encoding::{self, FileEncodingHint};
 use crate::error::ParseError;
 
@@ -116,24 +115,6 @@ impl LogEvent {
             Self::Jdbc(_) => None,
             Self::DmProvider(event) => Some(event),
         }
-    }
-}
-
-impl LogRecord for LogEvent {
-    fn method(&self) -> &str {
-        self.method()
-    }
-
-    fn category(&self) -> &str {
-        self.category()
-    }
-
-    fn used_time_ms(&self) -> Option<f64> {
-        self.used_time_ms()
-    }
-
-    fn exec_id(&self) -> Option<i64> {
-        self.exec_id()
     }
 }
 

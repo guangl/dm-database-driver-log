@@ -15,7 +15,7 @@
 //!      因此列值、SQL 文本里即使含有分号或方括号也不会被误切。
 //!   3. 字段终点由「下一个标记的起点」决定，天然避开值里含分号的情况（例如 SQL 里的 ';'）。
 
-use crate::core::{LogFormat, LogRecord, RecordFraming};
+use crate::core::{LogFormat, RecordFraming};
 use crate::error::ParseError;
 
 /// 一行日志解析出的结构化事件（字段全部借用原始行，零拷贝）。
@@ -117,24 +117,6 @@ pub struct DriverLogEvent {
 /// JDBC 日志格式适配器。
 #[derive(Copy, Clone, Debug, Default)]
 pub struct JdbcFormat;
-
-impl LogRecord for DriverLogEvent {
-    fn method(&self) -> &str {
-        &self.method
-    }
-
-    fn category(&self) -> &str {
-        self.category
-    }
-
-    fn used_time_ms(&self) -> Option<f64> {
-        self.used_time_ms
-    }
-
-    fn exec_id(&self) -> Option<i64> {
-        self.exec_id
-    }
-}
 
 impl LogFormat for JdbcFormat {
     type Event = DriverLogEvent;
