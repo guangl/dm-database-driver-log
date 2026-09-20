@@ -1,0 +1,58 @@
+[package]
+name = "dm-database-driver-log"
+version = "0.1.0"
+edition = "2024"
+authors = ["guangl"]
+description = "A pluggable streaming parser for DM database driver logs"
+license = "MIT"
+include = [
+    "Cargo.toml",
+    "README.md",
+    "src/**/*.rs",
+    "tests/**/*.rs",
+    "examples/**/*.rs",
+    "benches/**/*.rs",
+]
+
+[features]
+default = ["jdbc"]
+jdbc = []
+dm-provider = []
+
+[dependencies]
+encoding = "0.2"
+thiserror = "2.0.17"
+
+[lib]
+name = "dm_database_driver_log"
+path = "src/lib.rs"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports", "plotters"] }
+
+[[bench]]
+name = "driver_benchmark"
+harness = false
+
+[[example]]
+name = "batch_summary"
+required-features = ["jdbc"]
+
+[[example]]
+name = "filter_builder"
+required-features = ["jdbc"]
+
+[[example]]
+name = "filter_slow_queries"
+required-features = ["jdbc"]
+
+[[example]]
+name = "perf_full"
+required-features = ["jdbc"]
+
+[[example]]
+name = "provider_summary"
+required-features = ["dm-provider"]
+
+[profile.release]
+opt-level = 3
