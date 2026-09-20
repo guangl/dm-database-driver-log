@@ -13,6 +13,7 @@ keywords = ["dm-database", "driver-log", "parser", "jdbc"]
 categories = ["parsing", "database"]
 include = [
     "Cargo.toml",
+    "CHANGELOG.md",
     "README.md",
     "src/**/*.rs",
     "tests/**/*.rs",
