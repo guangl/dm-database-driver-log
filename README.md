@@ -8,7 +8,8 @@
 
 达梦（DM）驱动日志解析库。这个 crate 只提供 Rust 依赖库 API，不包含命令行程序、Parquet 导出或数据库连接功能。
 
-要求 Rust 1.85 或更高版本（Rust 2024 edition）。
+要求 Rust 1.85 或更高版本（Rust 2024 edition）。库、examples 和 benchmark 均遵循该
+最低版本，CI 也会检查 MSRV 兼容性。
 
 默认启用 `jdbc` feature。需要解析 `DmProvider_*.log` 格式时启用 `dm-provider` feature：
 

@@ -46,7 +46,7 @@ fn report(durations: &[Duration], file_bytes: usize) {
     let min = throughputs.first().copied().unwrap_or_default();
     let max = throughputs.last().copied().unwrap_or_default();
     let avg = throughputs.iter().sum::<f64>() / throughputs.len().max(1) as f64;
-    let median = if throughputs.len().is_multiple_of(2) && !throughputs.is_empty() {
+    let median = if throughputs.len() % 2 == 0 && !throughputs.is_empty() {
         let middle = throughputs.len() / 2;
         (throughputs[middle - 1] + throughputs[middle]) / 2.0
     } else {
