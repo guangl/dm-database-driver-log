@@ -49,14 +49,6 @@ pub struct Event<'a> {
 }
 
 impl<'a> Event<'a> {
-    /// 无法解析的行退化成「只有原文」的事件，保证事件流与输入行一一对应。
-    pub fn degraded() -> Self {
-        Event {
-            category: "unparsed",
-            ..Default::default()
-        }
-    }
-
     /// 将当前行的零拷贝事件复制成可脱离输入缓冲区保存的记录。
     pub fn to_owned(&self, raw: &str, line_number: u64) -> DriverLogEvent {
         DriverLogEvent {
@@ -91,8 +83,8 @@ impl<'a> Event<'a> {
 
 /// 一条可独立保存的驱动日志事件。
 ///
-/// 文件迭代器返回此类型；单行调用方若只需要临时访问字段，可直接使用
-/// [`parse`] 返回的借用型 [`Event`]，避免分配。
+/// 文件迭代器返回此类型；统一入口会将 JDBC 记录包装为
+/// [`crate::LogEvent::Jdbc`]。
 #[derive(Debug, Clone, PartialEq)]
 pub struct DriverLogEvent {
     pub line_number: u64,
@@ -125,11 +117,6 @@ pub struct DriverLogEvent {
 /// JDBC 日志格式适配器。
 #[derive(Copy, Clone, Debug, Default)]
 pub struct JdbcFormat;
-
-/// JDBC 解析器的兼容名称；底层实现来自通用日志引擎。
-pub type DriverLogParserBuilder = crate::core::LogParserBuilder<JdbcFormat>;
-pub type DriverLogParser = crate::core::LogParser<JdbcFormat>;
-pub type DriverLogIterator = crate::core::LogIterator<JdbcFormat>;
 
 impl LogRecord for DriverLogEvent {
     fn method(&self) -> &str {

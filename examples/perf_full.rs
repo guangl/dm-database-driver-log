@@ -3,7 +3,7 @@
 //! 默认生成约 50 MiB 日志并执行 20 次；可通过 `PERF_SIZE_MB` 和
 //! `PERF_ITERS` 环境变量降低本地试跑成本。
 
-use dm_database_driver_log::DriverLogParserBuilder;
+use dm_database_driver_log::LogParserBuilder;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const RECORD: &[u8] = b"[INFO  - 2026-09-16 17:45:19.763] tid:119 - [benchmark] { conn-3, pstmt-854 } executeQuery(): rs-2216; [USED TIME]: 8.5ms; [EXEC_ID]: 19010657;\n";
@@ -19,9 +19,7 @@ fn generate_log_data(target_bytes: usize) -> Vec<u8> {
 fn bench_iter(path: &str, iterations: usize) -> Vec<Duration> {
     let mut durations = Vec::with_capacity(iterations);
     for _ in 0..iterations {
-        let parser = DriverLogParserBuilder::new(path)
-            .build()
-            .expect("open file");
+        let parser = LogParserBuilder::new(path).build().expect("open file");
         let start = Instant::now();
         let count = parser
             .iter()
@@ -90,9 +88,7 @@ fn main() {
 
     println!("warming up");
     for _ in 0..3 {
-        let parser = DriverLogParserBuilder::new(&path)
-            .build()
-            .expect("open file");
+        let parser = LogParserBuilder::new(&path).build().expect("open file");
         std::hint::black_box(parser.iter().expect("iterate file").count());
     }
 

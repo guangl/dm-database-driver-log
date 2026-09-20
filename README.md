@@ -26,14 +26,52 @@ dm-database-driver-log = { version = "0.1", features = ["dm-provider"] }
 [SQL - 2026-09-12 08:55:30.193] tid:68 (IsBackground-True) { conn-2095 (sessId:281421579449976), command-4579 } ExecuteDbDataReader(CommandBehavior) [SQL]: SELECT ... [USED TIME]: 2ms; [EXEC_ID]: 908131301;
 ```
 
-Provider 日志中的 SQL 可以跨物理行；使用 `DmProviderLogParserBuilder` 时会合并到同一个 `DmProviderEvent`。`used_time_ms` 统一换算成毫秒，原始值保存在 `used_time_text`。
+Provider 日志中的 SQL 可以跨物理行；使用统一的 `LogParserBuilder` 时会自动识别格式，
+并将跨行内容合并到同一个 `LogEvent::DmProvider` 事件。`used_time_ms` 统一换算成毫秒，
+原始值保存在 `used_time_text`。
+
+## 统一 API
+
+JDBC 和 DM Provider 共用同一套入口，解析器会根据第一条记录的日志头自动识别格式：
+
+```rust,no_run
+use dm_database_driver_log::{LogEvent, LogParserBuilder};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = LogParserBuilder::new("driver.log").build()?;
+
+    for result in parser.iter()? {
+        let event = result?;
+        println!(
+            "format={:?} line={} method={} category={} used_time_ms={:?}",
+            event.format(),
+            event.line_number(),
+            event.method(),
+            event.category(),
+            event.used_time_ms(),
+        );
+
+        match event {
+            #[cfg(feature = "jdbc")]
+            LogEvent::Jdbc(jdbc) => println!("jdbc thread={}", jdbc.thread),
+            #[cfg(feature = "dm-provider")]
+            LogEvent::DmProvider(provider) => println!("provider ids={}", provider.ids),
+        }
+    }
+    Ok(())
+}
+```
+
+单条记录也使用同一套入口：`parse_line()`、`parse_bytes()` 和
+`parse_bytes_with_encoding()` 返回 `LogEvent`。需要访问格式专属字段时使用
+`event.as_jdbc()` 或 `event.as_dm_provider()`。
 
 ## 扩展其他驱动日志
 
 文件读取、编码处理、单行/跨行 framing、错误上下文和通用过滤器位于统一引擎中。新增驱动时实现 `LogFormat` 和 `LogRecord` 即可复用：
 
 ```rust,ignore
-use dm_database_driver_log::{LogFormat, LogParserBuilder, LogRecord, RecordFraming};
+use dm_database_driver_log::advanced::{LogFormat, LogParserBuilder, LogRecord, RecordFraming};
 
 struct OtherDriverFormat;
 struct OtherDriverEvent {
@@ -50,10 +88,11 @@ impl LogRecord for OtherDriverEvent {
 }
 
 // 为 OtherDriverFormat 实现 LogFormat 后即可使用：
-// LogParserBuilder::<OtherDriverFormat>::new(path).build()?.iter()?;
+// advanced::LogParserBuilder::<OtherDriverFormat>::new(path).build()?.iter()?;
 ```
 
-`RecordFraming::Line` 适合一行一条记录；`RecordFraming::HeaderDelimited` 适合 SQL 或调用栈跨行的日志。现有 `DriverLogParserBuilder` 和 `DmProviderLogParserBuilder` 只是这套通用引擎的兼容类型别名。
+`RecordFraming::Line` 适合一行一条记录；`RecordFraming::HeaderDelimited` 适合 SQL 或调用栈跨行的日志。
+高级通用引擎位于 `advanced` 命名空间，内置 JDBC/DM Provider 的日常调用不需要接触它。
 
 新增一种驱动日志时按以下顺序处理：
 
@@ -75,16 +114,16 @@ dm-database-driver-log = "0.1"
 逐行流式解析文件：
 
 ```rust,no_run
-use dm_database_driver_log::DriverLogParserBuilder;
+use dm_database_driver_log::LogParserBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let parser = DriverLogParserBuilder::new("dm-jdbc.log").build()?;
+    let parser = LogParserBuilder::new("driver.log").build()?;
 
     for result in parser.iter()? {
         let event = result?;
         println!(
             "line={} method={} used_time_ms={:?}",
-            event.line_number, event.method, event.used_time_ms
+            event.line_number(), event.method(), event.used_time_ms()
         );
     }
     Ok(())
@@ -94,10 +133,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 也可以链式筛选：
 
 ```rust,no_run
-use dm_database_driver_log::DriverLogParserBuilder;
+use dm_database_driver_log::LogParserBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let parser = DriverLogParserBuilder::new("dm-jdbc.log").build()?;
+    let parser = LogParserBuilder::new("driver.log").build()?;
     let slow_queries = parser
         .iter()?
         .filter_by_method("executeQuery")
@@ -105,32 +144,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for result in slow_queries {
         let event = result?;
-        println!("exec_id={:?} used_time_ms={:?}", event.exec_id, event.used_time_ms);
+        println!("exec_id={:?} used_time_ms={:?}", event.exec_id(), event.used_time_ms());
     }
     Ok(())
 }
 ```
 
-单行解析提供两个层次：
-
-- `parse_line(&str)` 返回可独立保存的 `DriverLogEvent`。
-- `parser::parse(&str)` 返回借用输入字符串的零拷贝 `Event`。
+单行解析返回可独立保存的统一 `LogEvent`；格式专属字段通过 `as_jdbc()` 或
+`as_dm_provider()` 借用访问。
 
 文件迭代器会跳过空行，并保留物理行号。格式错误会包含行号、字节偏移和原文；可以使用 `skip_errors()` 忽略错误，或保留错误结果进行诊断。
 
 ## API
 
-- `DriverLogParserBuilder`：构建文件解析器。
-- `DriverLogParserBuilder::encoding_hint()`：选择 `Auto`、`Utf8` 或 `Gb18030`。
-- `DriverLogParser::iter()`：返回流式 `DriverLogIterator`。
-- `DriverLogIterator::filter_by_method()`：按 JDBC 方法筛选。
-- `DriverLogIterator::filter_by_category()`：按事件分类筛选。
-- `DriverLogIterator::filter_by_used_time()`：按驱动耗时筛选。
-- `DriverLogIterator::filter_by_exec_id()`：按执行编号筛选。
+- `LogParserBuilder`：自动识别 JDBC/DM Provider 并构建文件解析器。
+- `LogParserBuilder::encoding_hint()`：选择 `Auto`、`Utf8` 或 `Gb18030`。
+- `LogParser::format()` / `LogParser::iter()`：查看格式并返回统一流式迭代器。
+- `LogIterator::filter_by_method()`：按方法筛选。
+- `LogIterator::filter_by_category()`：按事件分类筛选。
+- `LogIterator::filter_by_used_time()`：按驱动耗时筛选。
+- `LogIterator::filter_by_exec_id()`：按执行编号筛选。
 - `parse_line()` / `parse_bytes()` / `parse_bytes_with_encoding()`：解析单条日志。
-- `DmProviderLogParserBuilder` / `DmProviderLogIterator`：解析启用 `dm-provider` feature 后的 Provider 日志。
-- `dm_provider::parse_line()` / `dm_provider::parse_bytes()`：解析单条 Provider 记录。
-- `LogFormat` / `LogRecord` / `LogParserBuilder<F>`：扩展其他驱动日志格式。
+- `LogEvent::as_jdbc()` / `LogEvent::as_dm_provider()`：访问格式专属字段。
+- `advanced::{LogFormat, LogRecord, LogParserBuilder<F>}`：扩展其他驱动日志格式。
 
 ## 测试覆盖率
 

@@ -5,7 +5,6 @@
 //! 启用，避免把两套格式的状态机混在同一个迭代器里。
 
 use crate::core::{LogFormat, LogRecord, RecordFraming};
-use crate::encoding::{self, FileEncodingHint};
 use crate::error::ParseError;
 
 const MARK_RETURN: &str = "[RETURN]:";
@@ -50,11 +49,6 @@ pub struct DmProviderEvent {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DmProviderFormat;
 
-/// DM Provider 解析器的兼容名称；底层实现来自通用日志引擎。
-pub type DmProviderLogParserBuilder = crate::core::LogParserBuilder<DmProviderFormat>;
-pub type DmProviderLogParser = crate::core::LogParser<DmProviderFormat>;
-pub type DmProviderLogIterator = crate::core::LogIterator<DmProviderFormat>;
-
 impl LogRecord for DmProviderEvent {
     fn method(&self) -> &str {
         &self.method
@@ -94,19 +88,6 @@ impl LogFormat for DmProviderFormat {
 /// 解析一条 Provider 记录。记录可以包含 SQL 的换行内容。
 pub fn parse_line(record: &str) -> Result<DmProviderEvent, ParseError> {
     parse_inner(record).map_err(|error| error.with_context(record, 0))
-}
-
-/// 从字节切片解析 Provider 记录。
-pub fn parse_bytes(record: &[u8]) -> Result<DmProviderEvent, ParseError> {
-    parse_bytes_with_encoding(record, FileEncodingHint::Auto)
-}
-
-/// 按指定编码解析 Provider 记录。
-pub fn parse_bytes_with_encoding(
-    record: &[u8],
-    encoding: FileEncodingHint,
-) -> Result<DmProviderEvent, ParseError> {
-    parse_line(&encoding::decode(record, encoding))
 }
 
 fn parse_inner(record: &str) -> Result<DmProviderEvent, ParseError> {

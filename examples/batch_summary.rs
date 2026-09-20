@@ -2,7 +2,7 @@
 //!
 //! 用法：`cargo run --example batch_summary -- <path-to-jdbc-log>`
 
-use dm_database_driver_log::DriverLogParserBuilder;
+use dm_database_driver_log::LogParserBuilder;
 use std::collections::BTreeMap;
 use std::env;
 
@@ -12,8 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     });
 
-    let parser = DriverLogParserBuilder::new(&path).build()?;
-    let mut categories = BTreeMap::<&str, usize>::new();
+    let parser = LogParserBuilder::new(&path).build()?;
+    let mut categories = BTreeMap::<String, usize>::new();
     let mut parsed = 0usize;
     let mut errors = 0usize;
     let mut total_ms = 0.0;
@@ -22,8 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match result {
             Ok(event) => {
                 parsed += 1;
-                *categories.entry(event.category).or_default() += 1;
-                total_ms += event.used_time_ms.unwrap_or_default();
+                *categories.entry(event.category().to_owned()).or_default() += 1;
+                total_ms += event.used_time_ms().unwrap_or_default();
             }
             Err(_) => errors += 1,
         }

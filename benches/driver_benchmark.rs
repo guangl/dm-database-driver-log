@@ -49,7 +49,7 @@ impl Drop for TempLog {
 
 #[cfg(feature = "jdbc")]
 fn count_jdbc_records(path: &Path) -> usize {
-    let parser = dm_database_driver_log::DriverLogParserBuilder::new(path)
+    let parser = dm_database_driver_log::LogParserBuilder::new(path)
         .build()
         .expect("open JDBC benchmark log");
     parser.iter().expect("iterate JDBC benchmark log").count()
@@ -57,7 +57,7 @@ fn count_jdbc_records(path: &Path) -> usize {
 
 #[cfg(feature = "dm-provider")]
 fn count_dm_provider_records(path: &Path) -> usize {
-    let parser = dm_database_driver_log::DmProviderLogParserBuilder::new(path)
+    let parser = dm_database_driver_log::LogParserBuilder::new(path)
         .build()
         .expect("open Provider benchmark log");
     parser
@@ -68,7 +68,7 @@ fn count_dm_provider_records(path: &Path) -> usize {
 
 #[cfg(feature = "jdbc")]
 fn benchmark_jdbc(c: &mut Criterion) {
-    use dm_database_driver_log::DriverLogParserBuilder;
+    use dm_database_driver_log::LogParserBuilder;
 
     let mut group = c.benchmark_group("jdbc_driver_parser");
     group.sample_size(20);
@@ -80,7 +80,7 @@ fn benchmark_jdbc(c: &mut Criterion) {
     if real_path.exists() {
         group.bench_function("parse_real_jdbc_log", |b| {
             b.iter(|| {
-                let parser = DriverLogParserBuilder::new(&real_path).build().unwrap();
+                let parser = LogParserBuilder::new(&real_path).build().unwrap();
                 black_box(parser.iter().unwrap().count());
             });
         });
@@ -92,7 +92,7 @@ fn benchmark_jdbc(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(TARGET_BYTES as u64));
     group.bench_function("parse_jdbc_5mb", |b| {
         b.iter(|| {
-            let parser = DriverLogParserBuilder::new(&single.path).build().unwrap();
+            let parser = LogParserBuilder::new(&single.path).build().unwrap();
             black_box(parser.iter().unwrap().count());
         });
     });
@@ -101,7 +101,7 @@ fn benchmark_jdbc(c: &mut Criterion) {
     group.throughput(Throughput::Elements(single_count));
     group.bench_function("parse_jdbc_5mb_records_per_second", |b| {
         b.iter(|| {
-            let parser = DriverLogParserBuilder::new(&single.path).build().unwrap();
+            let parser = LogParserBuilder::new(&single.path).build().unwrap();
             black_box(parser.iter().unwrap().count());
         });
     });
@@ -114,9 +114,7 @@ fn benchmark_jdbc(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(TARGET_BYTES as u64));
     group.bench_function("parse_jdbc_5mb_mixed_lines", |b| {
         b.iter(|| {
-            let parser = DriverLogParserBuilder::new(&multiline.path)
-                .build()
-                .unwrap();
+            let parser = LogParserBuilder::new(&multiline.path).build().unwrap();
             black_box(parser.iter().unwrap().count());
         });
     });
@@ -126,7 +124,7 @@ fn benchmark_jdbc(c: &mut Criterion) {
 
 #[cfg(feature = "dm-provider")]
 fn benchmark_dm_provider(c: &mut Criterion) {
-    use dm_database_driver_log::DmProviderLogParserBuilder;
+    use dm_database_driver_log::LogParserBuilder;
 
     let mut group = c.benchmark_group("dm_provider_parser");
     group.sample_size(20);
@@ -138,7 +136,7 @@ fn benchmark_dm_provider(c: &mut Criterion) {
     if real_path.exists() {
         group.bench_function("parse_real_dm_provider_log", |b| {
             b.iter(|| {
-                let parser = DmProviderLogParserBuilder::new(&real_path).build().unwrap();
+                let parser = LogParserBuilder::new(&real_path).build().unwrap();
                 black_box(parser.iter().unwrap().count());
             });
         });
@@ -151,9 +149,7 @@ fn benchmark_dm_provider(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(TARGET_BYTES as u64));
     group.bench_function("parse_dm_provider_5mb", |b| {
         b.iter(|| {
-            let parser = DmProviderLogParserBuilder::new(&single.path)
-                .build()
-                .unwrap();
+            let parser = LogParserBuilder::new(&single.path).build().unwrap();
             black_box(parser.iter().unwrap().count());
         });
     });
@@ -162,9 +158,7 @@ fn benchmark_dm_provider(c: &mut Criterion) {
     group.throughput(Throughput::Elements(record_count));
     group.bench_function("parse_dm_provider_5mb_records_per_second", |b| {
         b.iter(|| {
-            let parser = DmProviderLogParserBuilder::new(&single.path)
-                .build()
-                .unwrap();
+            let parser = LogParserBuilder::new(&single.path).build().unwrap();
             black_box(parser.iter().unwrap().count());
         });
     });
@@ -177,9 +171,7 @@ fn benchmark_dm_provider(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(TARGET_BYTES as u64));
     group.bench_function("parse_dm_provider_5mb_mixed_records", |b| {
         b.iter(|| {
-            let parser = DmProviderLogParserBuilder::new(&multiline.path)
-                .build()
-                .unwrap();
+            let parser = LogParserBuilder::new(&multiline.path).build().unwrap();
             black_box(parser.iter().unwrap().count());
         });
     });
