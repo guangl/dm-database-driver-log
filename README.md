@@ -1,5 +1,10 @@
 # dm-database-driver-log
 
+[![CI](https://github.com/guangl/dm-database-driver-log/actions/workflows/ci.yml/badge.svg)](https://github.com/guangl/dm-database-driver-log/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/dm-database-driver-log.svg)](https://crates.io/crates/dm-database-driver-log)
+[![Documentation](https://docs.rs/dm-database-driver-log/badge.svg)](https://docs.rs/dm-database-driver-log)
+[![License](https://img.shields.io/crates/l/dm-database-driver-log.svg)](https://github.com/guangl/dm-database-driver-log/blob/main/LICENSE)
+
 达梦（DM）驱动日志解析库。这个 crate 只提供 Rust 依赖库 API，不包含命令行程序、Parquet 导出或数据库连接功能。
 
 默认启用 `jdbc` feature。需要解析 `DmProvider_*.log` 格式时启用 `dm-provider` feature：
