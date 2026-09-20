@@ -2,6 +2,7 @@
 name = "dm-database-driver-log"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 authors = ["guangl"]
 description = "A pluggable streaming parser for DM database driver logs"
 license = "MIT"

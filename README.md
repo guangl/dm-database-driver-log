@@ -3,9 +3,12 @@
 [![CI](https://github.com/guangl/dm-database-driver-log/actions/workflows/ci.yml/badge.svg)](https://github.com/guangl/dm-database-driver-log/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/dm-database-driver-log.svg)](https://crates.io/crates/dm-database-driver-log)
 [![Documentation](https://docs.rs/dm-database-driver-log/badge.svg)](https://docs.rs/dm-database-driver-log)
+[![Rust Version](https://img.shields.io/badge/rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/crates/l/dm-database-driver-log.svg)](https://github.com/guangl/dm-database-driver-log/blob/main/LICENSE)
 
 达梦（DM）驱动日志解析库。这个 crate 只提供 Rust 依赖库 API，不包含命令行程序、Parquet 导出或数据库连接功能。
+
+要求 Rust 1.85 或更高版本（Rust 2024 edition）。
 
 默认启用 `jdbc` feature。需要解析 `DmProvider_*.log` 格式时启用 `dm-provider` feature：
 
@@ -162,16 +165,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## API
 
+### 内置驱动日志
+
+日常使用只需要统一 API：
+
 - `LogParserBuilder`：自动识别 JDBC/DM Provider 并构建文件解析器。
 - `LogParserBuilder::encoding_hint()`：选择 `Auto`、`Utf8` 或 `Gb18030`。
-- `LogParser::format()` / `LogParser::iter()`：查看格式并返回统一流式迭代器。
-- `LogIterator::filter_by_method()`：按方法筛选。
-- `LogIterator::filter_by_category()`：按事件分类筛选。
-- `LogIterator::filter_by_used_time()`：按驱动耗时筛选。
-- `LogIterator::filter_by_exec_id()`：按执行编号筛选。
-- `parse_line()` / `parse_bytes()` / `parse_bytes_with_encoding()`：解析单条日志。
+- `LogParser::format()` / `LogParser::iter()`：查看格式并创建统一流式迭代器。
+- `LogIterator::filter_by_method()` / `filter_by_category()`：按方法或分类筛选。
+- `LogIterator::filter_by_used_time()` / `filter_by_exec_id()`：按耗时或执行编号筛选。
+- `LogIterator::skip_errors()`：忽略格式错误，只保留成功解析的事件。
+- `LogEvent`：通过 `format()`、`method()`、`category()`、`used_time_ms()`、`exec_id()` 等方法访问公共字段。
 - `LogEvent::as_jdbc()` / `LogEvent::as_dm_provider()`：访问格式专属字段。
-- `advanced::{LogFormat, LogRecord, LogParserBuilder<F>}`：扩展其他驱动日志格式。
+- `parse_line()` / `parse_bytes()` / `parse_bytes_with_encoding()`：解析单条日志。
+- `FileEncodingHint` / `ParseError`：控制输入编码并处理解析错误。
+
+启用 `jdbc` feature 后可使用 `JdbcEvent`，启用 `dm-provider` feature 后可使用
+`DmProviderEvent` 访问对应格式的专属结构。默认 feature 是 `jdbc`。
+
+### 扩展其他驱动
+
+`advanced` 命名空间提供新增驱动所需的通用引擎：
+
+- `advanced::LogFormat`：定义日志格式、解析和 framing 行为。
+- `advanced::LogRecord`：定义公共过滤字段。
+- `advanced::LogParserBuilder<F>` / `advanced::LogParser<F>`：构建和运行指定格式的解析器。
+- `advanced::RecordFraming`：选择单行或跨行记录边界。
 
 ## 测试覆盖率
 
