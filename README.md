@@ -238,8 +238,9 @@ cargo bench --all-features --bench driver_benchmark
 
 ## GitHub Actions
 
-- `CI`：检查格式、全部 feature 组合测试、Clippy、文档、examples/benchmark
-  编译、crate 打包和 90% 覆盖率门禁。
+- `CI`：在面向 `main` 的 Pull Request 上检查格式、全部 feature 组合测试、Clippy、
+  文档、examples/benchmark 编译、crate 打包和 90% 覆盖率门禁；合并到 `main` 后不会
+  因为 push 事件重复执行同一套 CI。
 - `Release to crates.io`：推送 `v*` tag 时校验版本、测试、构建并使用
   `CRATES_IO_TOKEN` 发布。
 - `Update Benchmark Baseline`：在 Actions 页面手动触发，运行 Criterion 并更新
